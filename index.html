@@ -50,6 +50,10 @@
                                 <label for="hero-quantity">예상 수량</label>
                                 <input type="text" id="hero-quantity" name="quantity" placeholder="예: 500개">
                             </div>
+                            <div class="form-group">
+                                <label for="hero-message">메시지</label>
+                                <textarea id="hero-message" name="message" rows="4" placeholder="예: 원하는 사이즈/용도/마감 등"></textarea>
+                            </div>
                             <button type="submit" class="btn btn-primary" style="width: 100%;" data-cta="hero-form">견적
                                 요청하기</button>
                         </form>
@@ -461,30 +465,28 @@
                 <h2>무료 견적 요청</h2>
                 <p class="subtitle">48시간 내 답변드립니다</p>
 
-                <form
+                <form id="detail-form"
                     style="max-width: 700px; margin: 0 auto; background: white; padding: 48px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
                     <div class="form-group">
                         <label for="name">이름 <span class="required">*</span></label>
-                        <input type="text" id="name" name="name" required
+                        <input type="text" id="detail-name" name="name" required
                             style="border-color: var(--formgray); color: var(--dark);">
                     </div>
 
                     <div class="form-group">
                         <label for="contact">이메일 <span class="required">*</span></label>
-                        <input type="text" id="contact" name="contact" required
-                            style="border-color: var(--formgray); color: var(--dark);">
+                        <input type="text" id="detail-email" name="contact" required
+                            style="border-color: var(--formgray); color: var(--dark);" placeholder="example@email.com" autocomplete="email">
                     </div>
 
                     <div class="form-group">
-                        <label for="image-front">앞면 이미지 URL or 업로드</label>
-                        <input type="text" id="image-front" name="image-front" placeholder="URL 입력"
-                            style="border-color: var(--formgray); color: var(--dark); margin-bottom: 8px;">
-                        <input type="file" id="image-front-file" name="image-front-file" accept="image/*>
+                        <label for="detail-quantity">예상 수량</label>
+                        <input type="text" id="detail-quantity" name="quantity" placeholder="예: 500개" style="border-color: var(--formgray); color: var(--dark);">
                     </div>
 
-                    <div class=" form-group">
+                    <div class="form-group">
                         <label for="request">간단한 요청사항</label>
-                        <textarea id="request" name="request" rows="4" placeholder="예: 500개, 5cm 정도, OPP 포장"
+                        <textarea id="detail=message" name="request" rows="4" placeholder="예: 500개, 5cm 정도, OPP 포장"
                             style="border-color: var(--formgray); color: var(--dark);"></textarea>
                     </div>
 
@@ -543,32 +545,7 @@
             });
         });
 
-        // 히어로 폼 제출
-        document.getElementById('hero-form').addEventListener('submit', async function (e) {
-        e.preventDefault();
-
-        const name = document.getElementById('hero-name').value.trim();
-        const email = document.getElementById('email').value.trim();
-        const quantity = document.getElementById('hero-quantity').value.trim();
-
-        if (!name || !email) {
-            alert("이름/이메일은 필수입니다.");
-            return;
-        }
-
-        const { error } = await supabaseClient
-            .from("oem")
-            .insert([{ name, email, quantity, message: "hero form" }]);
-
-        if (error) {
-            console.error(error);
-            alert("저장 실패: " + error.message);
-            return;
-        }
-
-        alert("✅ 문의 접수 완료!\n\n48시간 내 답변드리겠습니다.");
-        this.reset();
-        });
+    
 
 
         // 스무스 스크롤
@@ -587,13 +564,66 @@
     </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  const SUPABASE_URL = "YOUR_PROJECT_URL";
-  const SUPABASE_ANON_KEY = "YOUR_PUBLISHABLE_KEY"; // publishable key 넣는 곳
-
+  const SUPABASE_URL = "https://hvzqokzbfikymogxvpri.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_tNO9yaPnfZ57n0oSHznErw_obfihz9T";
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // (기존 스크립트 코드 계속...)
+  async function insertOem({ name, email, quantity = "", message = "", source = "" }) {
+    const { error } = await supabaseClient
+      .from("oem")
+      .insert([{ name, email, quantity, message, source }]);
+    if (error) throw error;
+  }
+
+  function wireOemForm({ formId, nameId, emailId, quantityId, messageId, source }) {
+    const form = document.getElementById(formId);
+    if (!form) return;
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const name = document.getElementById(nameId)?.value.trim();
+      const email = document.getElementById(emailId)?.value.trim();
+      const quantity = quantityId ? (document.getElementById(quantityId)?.value.trim() || "") : "";
+      const message = messageId ? (document.getElementById(messageId)?.value.trim() || "") : "";
+
+      if (!name || !email) return alert("이름/이메일은 필수입니다.");
+
+      try {
+        await insertOem({ name, email, quantity, message, source });
+        alert("✅ 문의 접수 완료!\n\n48시간 내 답변드리겠습니다.");
+        form.reset();
+      } catch (err) {
+        console.error(err);
+        alert("저장 실패: " + (err?.message || err));
+      }
+    });
+  }
+
+  // hero 폼
+  wireOemForm({
+    formId: "hero-form",
+    nameId: "hero-name",
+    emailId: "form-email",
+    quantityId: "hero-quantity",
+    messageId: "hero-message",
+    source: "hero"
+  });
+
+  // detail 폼 (너 현재 HTML id 기준으로 맞춰줘야 함!)
+  // 현재 detail 폼은 name=id="name", email=id="contact", message=id="request", quantity=id="detail-quantity"
+  wireOemForm({
+    formId: "detail-form",
+    nameId: "detail-name",
+    emailId: "detail-email",
+    quantityId: "detail-quantity",
+    messageId: "detail-message",
+    source: "detail"
+  });
 </script>
+
+
+
 </body>
 
 </html>
